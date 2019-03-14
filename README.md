@@ -1,5 +1,7 @@
 # sample-controller
 
+![](Screen%20Shot%202019-03-14%20at%2016.46.34.png)
+
 This repository implements a simple controller for watching Foo resources as
 defined with a CustomResourceDefinition (CRD).
 
