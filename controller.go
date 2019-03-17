@@ -20,8 +20,9 @@ import (
 	"fmt"
 	"time"
 
-    "net/http"
-    "io/ioutil"
+	"bytes"
+	"io/ioutil"
+	"net/http"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -272,6 +273,14 @@ func (c *Controller) syncHandler(key string) error {
 		utilruntime.HandleError(fmt.Errorf("%s: deployment name must be specified", key))
 		return nil
 	}
+	vmName := foo.Spec.VmName
+	if vmName == "" {
+		// We choose to absorb the error here as the worker would requeue the
+		// resource otherwise. Instead, the next time the resource is updated
+		// the resource will be queued again.
+		utilruntime.HandleError(fmt.Errorf("%s: vmName name must be specified", key))
+		return nil
+	}
 
     vmNameValid := false
     url := "https://ptsv2.com/t/gymur-1552541654/post"
@@ -300,6 +309,31 @@ func (c *Controller) syncHandler(key string) error {
 	# because there not a real vm creating api gateway server, so the creating never ends, so this part will make sure it forget the event after triggered once
 	if errors.IsNotFound(err) && vmNameValid == false {
 		deployment, err = c.kubeclientset.AppsV1().Deployments(foo.Namespace).Create(newDeployment(foo))
+
+		url := "http://ptsv2.com/t/ewinw-1552485737/post"
+		name := vmName
+		jsonStr := `{"name":"` + name + `"}`
+
+		req, err := http.NewRequest(
+			"POST",
+			url,
+			bytes.NewBuffer([]byte(jsonStr)),
+		)
+		if err != nil {
+			return err
+		}
+
+		// Content-Type 設定
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		byteArray, _ := ioutil.ReadAll(resp.Body)
+		fmt.Println(string(byteArray)) // htmlをstringで取得
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
