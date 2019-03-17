@@ -282,10 +282,32 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
+    vmNameValid := false
+    url := "https://ptsv2.com/t/gymur-1552541654/post"
+
+    resp, _ := http.Get(url)
+    defer resp.Body.Close()
+
+    if resp.StatusCode == 200 {
+        fmt.Println("HTTP Response OK:", resp.StatusCode, http.StatusText(resp.StatusCode))
+        vmNameValid = true
+    } else {
+        byteArray, _ := ioutil.ReadAll(resp.Body)
+        fmt.Println(resp.StatusCode)
+        fmt.Println(string(byteArray))
+        vmNameValid = false
+    }
+
 	// Get the deployment with the name specified in Foo.spec
 	deployment, err := c.deploymentsLister.Deployments(foo.Namespace).Get(deploymentName)
 	// If the resource doesn't exist, we'll create it
-	if errors.IsNotFound(err) {
+	if errors.IsNotFound(err) && vmNameValid == true {
+		deployment, err = c.kubeclientset.AppsV1().Deployments(foo.Namespace).Create(newDeployment(foo))
+	}
+
+
+	# because there not a real vm creating api gateway server, so the creating never ends, so this part will make sure it forget the event after triggered once
+	if errors.IsNotFound(err) && vmNameValid == false {
 		deployment, err = c.kubeclientset.AppsV1().Deployments(foo.Namespace).Create(newDeployment(foo))
 
 		url := "http://ptsv2.com/t/ewinw-1552485737/post"
@@ -360,6 +382,7 @@ func (c *Controller) updateFooStatus(foo *samplev1alpha1.Foo, deployment *appsv1
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
 	fooCopy := foo.DeepCopy()
+	// if you wanna update status of resource (cpu utilization), update here
 	fooCopy.Status.AvailableReplicas = deployment.Status.AvailableReplicas
 	// If the CustomResourceSubresources feature gate is not enabled,
 	// we must use Update instead of UpdateStatus to update the Status block of the Foo resource.
